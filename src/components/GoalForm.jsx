@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { addGoal } from '../utils/goals'
+import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function GoalForm({ onClose }) {
@@ -10,10 +11,11 @@ export default function GoalForm({ onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!title.trim() || !targetAmount || Number(targetAmount) <= 0) return
+    const targetNum = parseAmount(targetAmount)
+    if (!title.trim() || !targetNum || targetNum <= 0) return
     setSubmitting(true)
     try {
-      await addGoal(user.uid, { title: title.trim(), targetAmount: Number(targetAmount) })
+      await addGoal(user.uid, { title: title.trim(), targetAmount: targetNum })
       onClose()
     } finally {
       setSubmitting(false)
@@ -41,13 +43,12 @@ export default function GoalForm({ onClose }) {
             <label htmlFor="goal-amount">Target Jumlah (Rp)</label>
             <input
               id="goal-amount"
-              type="number"
-              min="1"
+              type="text"
+              inputMode="decimal"
               required
               value={targetAmount}
               onChange={(e) => setTargetAmount(e.target.value)}
               placeholder="5000000"
-              inputMode="numeric"
             />
           </div>
           <div className="modal-actions">

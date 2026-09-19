@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import GoalRing from '../components/GoalRing.jsx'
 import { addFundsToGoal, deleteGoal, GOAL_COLORS } from '../utils/goals'
-import { formatRupiah } from '../utils/format'
+import { formatRupiah, parseAmount } from '../utils/format'
 
 function GoalCard({ goal, index }) {
   const [adding, setAdding] = useState(false)
@@ -11,8 +11,9 @@ function GoalCard({ goal, index }) {
   const color = goal.color || GOAL_COLORS[index % GOAL_COLORS.length]
 
   async function handleAddFunds() {
-    if (amount && Number(amount) > 0) {
-      await addFundsToGoal(goal.id, amount)
+    const parsed = parseAmount(amount)
+    if (parsed && parsed > 0) {
+      await addFundsToGoal(goal.id, parsed)
       setAmount('')
       setAdding(false)
     }
@@ -29,8 +30,8 @@ function GoalCard({ goal, index }) {
         {adding && (
           <div className="budget-edit-row" style={{ marginTop: 8 }}>
             <input
-              type="number"
-              min="1"
+              type="text"
+              inputMode="decimal"
               placeholder="Jumlah (Rp)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

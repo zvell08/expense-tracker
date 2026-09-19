@@ -3,7 +3,7 @@ import { Pencil } from 'lucide-react'
 import GoalRing from '../components/GoalRing.jsx'
 import { EXPENSE_CATEGORIES } from '../utils/categories'
 import { setBudget } from '../utils/budgets'
-import { formatRupiah } from '../utils/format'
+import { formatRupiah, parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 function BudgetRow({ category, spent, budget }) {
@@ -16,8 +16,9 @@ function BudgetRow({ category, spent, budget }) {
   const barColor = over ? 'var(--expense)' : percent > 75 ? 'var(--gold)' : 'var(--accent)'
 
   async function handleSave() {
-    if (value !== '' && Number(value) >= 0) {
-      await setBudget(user.uid, category.id, value)
+    const parsed = parseAmount(value)
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      await setBudget(user.uid, category.id, parsed)
     }
     setEditing(false)
   }
@@ -51,8 +52,8 @@ function BudgetRow({ category, spent, budget }) {
       {editing && (
         <div className="budget-edit-row">
           <input
-            type="number"
-            min="0"
+            type="text"
+            inputMode="decimal"
             placeholder="Jumlah budget (Rp)"
             value={value}
             onChange={(e) => setValue(e.target.value)}

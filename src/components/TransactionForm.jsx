@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { addTransaction } from '../utils/firestore'
 import { addFundsToGoal } from '../utils/goals'
+import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
@@ -25,7 +26,8 @@ export default function TransactionForm({ onClose, goals = [] }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!amount || Number(amount) <= 0) return
+    const amountNum = parseAmount(amount)
+    if (!amountNum || amountNum <= 0) return
     setSubmitting(true)
     try {
       const isGoal = category.startsWith('goal:')
@@ -38,7 +40,7 @@ export default function TransactionForm({ onClose, goals = [] }) {
 
       await addTransaction(user.uid, {
         type,
-        amount: Number(amount),
+        amount: amountNum,
         category,
         ...(isGoal ? { categoryLabel, categoryColor: goal?.color || '#A78BFA' } : {}),
         description: description.trim() || categoryLabel,
@@ -46,7 +48,7 @@ export default function TransactionForm({ onClose, goals = [] }) {
       })
 
       if (isGoal && goalId) {
-        await addFundsToGoal(goalId, amount)
+        await addFundsToGoal(goalId, amountNum)
       }
 
       onClose()
@@ -83,13 +85,12 @@ export default function TransactionForm({ onClose, goals = [] }) {
             <label htmlFor="amount">Jumlah (Rp)</label>
             <input
               id="amount"
-              type="number"
-              min="1"
+              type="text"
+              inputMode="decimal"
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="50000"
-              inputMode="numeric"
+              placeholder="50000 atau 3.5"
             />
           </div>
           <div className="field">

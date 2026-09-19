@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { addReminder } from '../utils/reminders'
+import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
@@ -14,12 +15,13 @@ export default function ReminderForm({ onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!title.trim() || !amount || Number(amount) <= 0) return
+    const amountNum = parseAmount(amount)
+    if (!title.trim() || !amountNum || amountNum <= 0) return
     setSubmitting(true)
     try {
       await addReminder(user.uid, {
         title: title.trim(),
-        amount: Number(amount),
+        amount: amountNum,
         dueDate,
         recurring,
       })
@@ -50,13 +52,12 @@ export default function ReminderForm({ onClose }) {
             <label htmlFor="r-amount">Jumlah (Rp)</label>
             <input
               id="r-amount"
-              type="number"
-              min="1"
+              type="text"
+              inputMode="decimal"
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="150000"
-              inputMode="numeric"
             />
           </div>
           <div className="field">
