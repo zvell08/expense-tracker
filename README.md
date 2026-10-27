@@ -56,6 +56,18 @@ service cloud.firestore {
       allow read, delete, update: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
+    match /categories/{id} {
+      allow read, delete, update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /wallets/{id} {
+      allow read, delete, update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /transfers/{id} {
+      allow read, delete, update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
     match /budgets/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
@@ -63,7 +75,7 @@ service cloud.firestore {
 }
 ```
 
-Ini memastikan tiap user cuma bisa baca/tulis data miliknya sendiri, di keempat collection yang dipakai aplikasi ini (`transactions`, `goals`, `reminders`, `budgets`).
+Ini memastikan tiap user cuma bisa baca/tulis data miliknya sendiri, di semua collection yang dipakai aplikasi ini (`transactions`, `goals`, `reminders`, `budgets`, `categories`, `wallets`, `transfers`). Kalau rules `categories`, `wallets`, dan `transfers` belum ditambahkan, fitur kategori custom dan dompet akan menampilkan pemberitahuan dan tidak bisa menyimpan data.
 
 ---
 
@@ -87,6 +99,8 @@ Buka `http://localhost:5173` di browser. Daftar akun baru (email + password), la
 - **Laporan** — ringkasan mingguan / bulanan / tahunan, dengan navigasi maju-mundur antar periode
 - **Target Keuangan** — bikin target nabung (mis. Dana Darurat), isi dana bertahap, progress ring persentase
 - **Tagihan & Reminder** — catat tagihan berulang, tandai lunas, highlight otomatis kalau jatuh tempo ≤3 hari
+- **Kategori custom** — menu Lainnya → Kategori: buat, ubah nama/warna, dan hapus kategori pengeluaran & pemasukan sendiri
+- **Multi-dompet** — menu Lainnya → Dompet: banyak dompet (bank, e-wallet, tunai) dengan saldo awal, transfer antar dompet, dan filter dompet di Beranda
 
 ## 4. Struktur project
 
@@ -152,7 +166,6 @@ firebase deploy
 
 ## 6. Ide pengembangan lanjutan
 
-- Tambah kategori custom yang bisa dibuat user sendiri (simpan di Firestore, bukan hardcode).
 - Export data ke CSV/Excel.
 - Notifikasi push (browser/PWA) untuk tagihan yang mendekati jatuh tempo.
 - Multi-currency atau multi-akun (dompet, rekening, kartu kredit terpisah).

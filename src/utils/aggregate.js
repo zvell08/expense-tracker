@@ -1,13 +1,13 @@
 import { getCategoryById } from './categories'
 
 // Kelompokkan transaksi pengeluaran menjadi total per kategori (untuk donut chart)
-export function aggregateByCategory(transactions) {
+export function aggregateByCategory(transactions, customCategories = []) {
   const map = {}
   transactions
     .filter((t) => t.type === 'expense')
     .forEach((t) => {
       if (!map[t.category]) {
-        const cat = resolveCategoryDisplay(t)
+        const cat = resolveCategoryDisplay(t, customCategories)
         map[t.category] = { id: cat.id, label: cat.label, color: cat.color, value: 0 }
       }
       map[t.category].value += Number(t.amount)
@@ -16,9 +16,14 @@ export function aggregateByCategory(transactions) {
 }
 
 // Tentukan label & warna kategori transaksi. Kalau transaksi ini terhubung ke
-// target keuangan (categoryLabel/categoryColor tersimpan langsung di transaksi),
-// pakai itu. Kalau tidak, cari dari daftar kategori standar.
-export function resolveCategoryDisplay(t) {
+// target keuangan atau kategori buatan user yang sudah dihapus (categoryLabel/
+// categoryColor tersimpan langsung di transaksi), pakai itu. Kategori buatan user
+// yang masih ada selalu diutamakan supaya perubahan nama/warna ikut berlaku.
+export function resolveCategoryDisplay(t, customCategories = []) {
+  const live = customCategories.find((c) => c.id === t.category)
+  if (live) {
+    return { id: live.id, label: live.label, color: live.color }
+  }
   if (t.categoryLabel) {
     return { id: t.category, label: t.categoryLabel, color: t.categoryColor || '#A78BFA' }
   }

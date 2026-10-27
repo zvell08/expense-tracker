@@ -17,7 +17,21 @@ export const INCOME_CATEGORIES = [
   { id: 'lainnya-masuk', label: 'Lainnya', color: '#7A7566' },
 ]
 
-export function getCategoryById(id, type) {
+// Pilihan warna untuk kategori & dompet buatan user
+export const CATEGORY_COLORS = [
+  '#B5502B', '#C89B3C', '#7A6BAF', '#3C7A89', '#B5486B', '#2F6F4E',
+  '#4A5A8C', '#10B981', '#60A5FA', '#F97066', '#A78BFA', '#F472B6',
+]
+
+// Kategori bawaan + kategori buatan user untuk satu tipe
+export function categoriesForType(type, customCategories = []) {
+  const defaults = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  return [...defaults, ...customCategories.filter((c) => c.type === type)]
+}
+
+export function getCategoryById(id, type, customCategories = []) {
+  const custom = customCategories.find((c) => c.id === id)
+  if (custom) return custom
   const list = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   return list.find((c) => c.id === id) || list[list.length - 1]
 }

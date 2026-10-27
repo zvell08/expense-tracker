@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Pencil } from 'lucide-react'
 import GoalRing from '../components/GoalRing.jsx'
-import { EXPENSE_CATEGORIES } from '../utils/categories'
+import { categoriesForType } from '../utils/categories'
+import { useData } from '../context/DataContext.jsx'
 import { setBudget } from '../utils/budgets'
 import { formatRupiah, parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -66,6 +67,8 @@ function BudgetRow({ category, spent, budget }) {
 }
 
 export default function BudgetPage({ monthTransactions, budgets }) {
+  const { customCategories } = useData()
+  const EXPENSE_CATEGORIES = categoriesForType('expense', customCategories)
   const spentByCategory = {}
   monthTransactions
     .filter((t) => t.type === 'expense')

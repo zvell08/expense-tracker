@@ -9,6 +9,7 @@ import {
 } from '../utils/aggregate'
 import { exportReportToExcel } from '../utils/exportExcel'
 import { formatRupiah } from '../utils/format'
+import { useData } from '../context/DataContext.jsx'
 
 const PERIODS = [
   { id: 'week', label: 'Minggu' },
@@ -17,13 +18,17 @@ const PERIODS = [
 ]
 
 export default function ReportsPage({ transactions }) {
+  const { customCategories, wallets } = useData()
   const [periodType, setPeriodType] = useState('month')
   const [refDate, setRefDate] = useState(new Date())
 
   const range = useMemo(() => getPeriodRange(periodType, refDate), [periodType, refDate])
   const periodTx = useMemo(() => filterByRange(transactions, range), [transactions, range])
   const chartData = useMemo(() => bucketData(periodType, refDate, transactions), [periodType, refDate, transactions])
-  const categoryData = useMemo(() => aggregateByCategory(periodTx), [periodTx])
+  const categoryData = useMemo(
+    () => aggregateByCategory(periodTx, customCategories),
+    [periodTx, customCategories]
+  )
 
   const income = sumByType(periodTx, 'income')
   const expense = sumByType(periodTx, 'expense')
@@ -38,6 +43,8 @@ export default function ReportsPage({ transactions }) {
       expense,
       transactions: periodTx,
       categoryData,
+      customCategories,
+      wallets,
     })
   }
 

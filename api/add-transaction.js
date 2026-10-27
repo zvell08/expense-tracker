@@ -10,7 +10,8 @@
 //   &desc=Makan%20siang
 //
 // Field yang wajib: secret, type (expense/income), amount, category
-// Field opsional: desc (default = nama kategori), date (default = hari ini, format YYYY-MM-DD)
+// Field opsional: desc (default = nama kategori), date (default = hari ini, format YYYY-MM-DD),
+// wallet (nama dompet, default = Dompet Utama). category juga bisa nama kategori buatan sendiri.
 
 import admin from 'firebase-admin'
 import { timingSafeEqual } from 'node:crypto'
@@ -53,6 +54,11 @@ const CATEGORY_ALIASES = {
   gaji: 'gaji', bonus: 'bonus', usaha: 'usaha', 'lainnyamasuk': 'lainnya-masuk',
 }
 
+// Normalisasi nama untuk pencocokan longgar (huruf kecil, tanpa spasi/tanda baca)
+function normalizeName(raw) {
+  return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 function normalizeCategory(raw) {
   if (!raw) return null
   const key = String(raw).trim().toLowerCase().replace(/[^a-z]/g, '')
@@ -68,8 +74,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'Kode rahasia salah atau tidak ada.' })
   }
 
-  const { type, amount, category: rawCategory, desc, date } = params
-  const category = normalizeCategory(rawCategory)
+  const { type, amount, category: rawCategory, desc, date, wallet: rawWallet } = params
 
   if (!['expense', 'income'].includes(type)) {
     return res.status(400).json({ ok: false, error: 'type harus "expense" atau "income".' })
@@ -79,22 +84,56 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'amount harus angka lebih dari 0.' })
   }
 
-  const labels = type === 'expense' ? EXPENSE_LABELS : INCOME_LABELS
-  const categoryLabel = category && labels[category]
-  if (!categoryLabel) {
-    return res.status(400).json({
-      ok: false,
-      error: `category "${rawCategory}" tidak dikenal. Pilihan: ${Object.keys(labels).join(', ')}`,
-    })
-  }
-
   try {
+    const userId = process.env.SHORTCUT_USER_ID
     const db = getDb()
+
+    // Kategori: kode/nama bawaan dulu, kalau tidak ada cocokkan dengan kategori buatan user
+    const labels = type === 'expense' ? EXPENSE_LABELS : INCOME_LABELS
+    let category = normalizeCategory(rawCategory)
+    let categoryLabel = category && labels[category]
+    let categoryColor = null
+
+    if (!categoryLabel && rawCategory) {
+      const snap = await db.collection('categories')
+        .where('userId', '==', userId)
+        .where('type', '==', type)
+        .get()
+      const wanted = normalizeName(rawCategory)
+      const match = snap.docs.find((d) => normalizeName(d.data().label) === wanted)
+      if (match) {
+        category = match.id
+        categoryLabel = match.data().label
+        categoryColor = match.data().color
+      }
+    }
+
+    if (!categoryLabel) {
+      return res.status(400).json({
+        ok: false,
+        error: `category "${rawCategory}" tidak dikenal. Pilihan bawaan: ${Object.keys(labels).join(', ')}, atau nama kategori buatanmu.`,
+      })
+    }
+
+    // Dompet (opsional): cocokkan nama dompet; kosong atau "utama" = Dompet Utama
+    let walletId = 'main'
+    if (rawWallet && !['utama', 'dompetutama', 'main'].includes(normalizeName(rawWallet))) {
+      const snap = await db.collection('wallets').where('userId', '==', userId).get()
+      const wanted = normalizeName(rawWallet)
+      const match = snap.docs.find((d) => normalizeName(d.data().name) === wanted)
+      if (!match) {
+        return res.status(400).json({ ok: false, error: `wallet "${rawWallet}" tidak ditemukan.` })
+      }
+      walletId = match.id
+    }
+
     await db.collection('transactions').add({
-      userId: process.env.SHORTCUT_USER_ID,
+      userId,
       type,
       amount: amountNum,
       category,
+      ...(categoryColor ? { categoryLabel, categoryColor } : {}),
+      walletId,
       description: (desc && String(desc).trim()) || categoryLabel,
       date: date || new Date().toISOString().slice(0, 10),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

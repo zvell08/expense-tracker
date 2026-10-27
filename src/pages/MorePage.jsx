@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Receipt, Bell, LogOut, Pencil, ChevronRight } from 'lucide-react'
+import { Receipt, Bell, LogOut, Pencil, ChevronRight, Wallet, Tags } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import EditNameForm from '../components/EditNameForm.jsx'
 
@@ -26,6 +26,16 @@ export default function MorePage({ setRoute, unpaidCount }) {
         <button className="menu-item" onClick={() => setRoute('transactions')}>
           <span className="menu-icon"><Receipt size={18} /></span>
           Semua Transaksi
+          <ChevronRight size={16} className="menu-arrow" />
+        </button>
+        <button className="menu-item" onClick={() => setRoute('wallets')}>
+          <span className="menu-icon"><Wallet size={18} /></span>
+          Dompet
+          <ChevronRight size={16} className="menu-arrow" />
+        </button>
+        <button className="menu-item" onClick={() => setRoute('categories')}>
+          <span className="menu-icon"><Tags size={18} /></span>
+          Kategori
           <ChevronRight size={16} className="menu-arrow" />
         </button>
         <button className="menu-item" onClick={() => setRoute('reminders')}>

@@ -1,22 +1,43 @@
 import { useState } from 'react'
+import { deleteField } from 'firebase/firestore'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { addTransaction, updateTransaction } from '../utils/firestore'
 import { addFundsToGoal } from '../utils/goals'
+import { MAIN_WALLET_ID } from '../utils/wallets'
 import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useData } from '../context/DataContext.jsx'
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
-export default function TransactionForm({ onClose, goals = [], editing = null }) {
+export default function TransactionForm({
+  onClose, goals = [], editing = null, defaultWalletId = MAIN_WALLET_ID,
+}) {
   const { user } = useAuth()
+  const { customCategories, wallets } = useData()
   const [type, setType] = useState(editing?.type || 'expense')
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '')
   const [category, setCategory] = useState(editing?.category || EXPENSE_CATEGORIES[0].id)
   const [description, setDescription] = useState(editing?.description || '')
   const [date, setDate] = useState(editing?.date || todayStr())
+  const [walletId, setWalletId] = useState(
+    editing ? (editing.walletId || MAIN_WALLET_ID) : defaultWalletId
+  )
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
+  const customForType = customCategories.filter((c) => c.type === type)
+
+  // Transaksi lama dengan kategori buatan yang sudah dihapus: tetap tampilkan pilihannya
+  // supaya label/warna lamanya tidak hilang waktu disimpan ulang.
+  const orphan = editing
+    && editing.type === type
+    && editing.categoryLabel
+    && !editing.category.startsWith('goal:')
+    && !customForType.some((c) => c.id === editing.category)
+    ? editing
+    : null
 
   function handleTypeChange(nextType) {
     setType(nextType)
@@ -26,6 +47,7 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
 
   async function handleSubmit(e) {
     e.preventDefault()
+    setError('')
     const amountNum = parseAmount(amount)
     if (!amountNum || amountNum <= 0) return
     setSubmitting(true)
@@ -33,18 +55,40 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
       const isGoal = category.startsWith('goal:')
       const goalId = isGoal ? category.slice(5) : null
       const goal = isGoal ? goals.find((g) => g.id === goalId) : null
+      const customCat = customForType.find((c) => c.id === category)
+      const keepOrphan = orphan && category === orphan.category
 
       const categoryLabel = isGoal
         ? (goal?.title || 'Target Keuangan')
-        : categories.find((c) => c.id === category)?.label
+        : customCat
+          ? customCat.label
+          : keepOrphan
+            ? orphan.categoryLabel
+            : categories.find((c) => c.id === category)?.label
+
+      // Label & warna disimpan di transaksi untuk target keuangan dan kategori buatan,
+      // supaya tetap tampil benar walau kategorinya kemudian dihapus.
+      let labelFields
+      if (isGoal) {
+        labelFields = { categoryLabel, categoryColor: goal?.color || '#A78BFA' }
+      } else if (customCat) {
+        labelFields = { categoryLabel, categoryColor: customCat.color }
+      } else if (keepOrphan) {
+        labelFields = { categoryLabel, categoryColor: orphan.categoryColor }
+      } else if (editing) {
+        labelFields = { categoryLabel: deleteField(), categoryColor: deleteField() }
+      } else {
+        labelFields = {}
+      }
 
       const payload = {
         type,
         amount: amountNum,
         category,
-        ...(isGoal ? { categoryLabel, categoryColor: goal?.color || '#A78BFA' } : {}),
+        ...labelFields,
         description: description.trim() || categoryLabel,
         date,
+        walletId,
       }
 
       if (editing) {
@@ -57,6 +101,8 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
       }
 
       onClose()
+    } catch {
+      setError('Gagal menyimpan, coba lagi.')
     } finally {
       setSubmitting(false)
     }
@@ -85,6 +131,8 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
           </button>
         </div>
 
+        {error && <div className="auth-error">{error}</div>}
+
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="amount">Jumlah (Rp)</label>
@@ -104,6 +152,16 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
+              {customForType.length > 0 && (
+                <optgroup label="Kategori Saya">
+                  {customForType.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </optgroup>
+              )}
+              {orphan && (
+                <option value={orphan.category}>{orphan.categoryLabel} (dihapus)</option>
+              )}
               {!editing && type === 'expense' && goals.length > 0 && (
                 <optgroup label="Target Keuangan">
                   {goals.map((g) => (
@@ -118,6 +176,16 @@ export default function TransactionForm({ onClose, goals = [], editing = null })
               </p>
             )}
           </div>
+          {wallets.length > 1 && (
+            <div className="field">
+              <label htmlFor="wallet">Dompet</label>
+              <select id="wallet" value={walletId} onChange={(e) => setWalletId(e.target.value)}>
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="description">Catatan (opsional)</label>
             <input

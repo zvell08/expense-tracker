@@ -4,18 +4,24 @@ import { formatRupiah, formatDate } from '../utils/format'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { resolveCategoryDisplay } from '../utils/aggregate'
 import { deleteTransaction } from '../utils/firestore'
+import { walletIdOf } from '../utils/wallets'
+import { useData } from '../context/DataContext.jsx'
 
 function initials(label) {
   return label.trim().charAt(0).toUpperCase()
 }
 
 export default function TransactionList({ transactions, showFilter = true, onEdit }) {
+  const { customCategories, wallets } = useData()
   const [filter, setFilter] = useState('all')
 
-  const allCategories = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]
+  const allCategories = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES, ...customCategories]
   const filtered = filter === 'all'
     ? transactions
     : transactions.filter((t) => t.category === filter)
+
+  const showWallet = wallets.length > 1
+  const walletName = (t) => wallets.find((w) => w.id === walletIdOf(t))?.name || 'Dompet dihapus'
 
   return (
     <div className="tx-card">
@@ -39,7 +45,7 @@ export default function TransactionList({ transactions, showFilter = true, onEdi
       )}
 
       {filtered.map((t) => {
-        const cat = resolveCategoryDisplay(t)
+        const cat = resolveCategoryDisplay(t, customCategories)
         return (
           <div className="tx-row" key={t.id}>
             <div
@@ -50,7 +56,10 @@ export default function TransactionList({ transactions, showFilter = true, onEdi
             </div>
             <div className="tx-info">
               <div className="tx-desc">{t.description}</div>
-              <div className="tx-meta">{cat.label} · {formatDate(t.date)}</div>
+              <div className="tx-meta">
+                {cat.label} · {formatDate(t.date)}
+                {showWallet && ` · ${walletName(t)}`}
+              </div>
             </div>
             <div className={`tx-amount ${t.type}`}>
               {t.type === 'income' ? '+' : '-'}{formatRupiah(t.amount)}

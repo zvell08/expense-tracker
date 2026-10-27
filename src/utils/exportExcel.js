@@ -6,7 +6,9 @@ function sanitizeFileName(text) {
   return text.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
-export function exportReportToExcel({ periodLabel, income, expense, transactions, categoryData }) {
+export function exportReportToExcel({
+  periodLabel, income, expense, transactions, categoryData, customCategories = [], wallets = [],
+}) {
   const wb = XLSX.utils.book_new()
 
   // Sheet 1: Ringkasan
@@ -23,17 +25,18 @@ export function exportReportToExcel({ periodLabel, income, expense, transactions
   // Sheet 2: Daftar Transaksi
   const sortedTx = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date))
   const txRows = sortedTx.map((t) => {
-    const cat = resolveCategoryDisplay(t)
+    const cat = resolveCategoryDisplay(t, customCategories)
     return {
       Tanggal: formatDate(t.date),
       Tipe: t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+      Dompet: wallets.find((w) => w.id === (t.walletId || 'main'))?.name || 'Dompet Utama',
       Kategori: cat.label,
       Deskripsi: t.description || '',
       Jumlah: Number(t.amount),
     }
   })
   const wsTx = XLSX.utils.json_to_sheet(txRows)
-  wsTx['!cols'] = [{ wch: 14 }, { wch: 13 }, { wch: 20 }, { wch: 28 }, { wch: 14 }]
+  wsTx['!cols'] = [{ wch: 14 }, { wch: 13 }, { wch: 16 }, { wch: 20 }, { wch: 28 }, { wch: 14 }]
   XLSX.utils.book_append_sheet(wb, wsTx, 'Daftar Transaksi')
 
   // Sheet 3: Per Kategori (pengeluaran)
