@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [goals, setGoals] = useState([])
   const [reminders, setReminders] = useState([])
   const [activeSheet, setActiveSheet] = useState(null)
+  const [editingTx, setEditingTx] = useState(null)
 
   const now = new Date()
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
@@ -74,6 +75,17 @@ export default function Dashboard() {
 
   const income = sumByType(monthTransactions, 'income')
   const expense = sumByType(monthTransactions, 'expense')
+
+  // Sisa uang dari semua bulan sebelum bulan yang lagi dipilih (dibawa ke bulan ini)
+  const carryOver = useMemo(() => {
+    const startStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`
+    return transactions
+      .filter((t) => t.date < startStr)
+      .reduce(
+        (sum, t) => sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount)),
+        0
+      )
+  }, [transactions, selectedYear, selectedMonth])
   const categoryData = useMemo(() => aggregateByCategory(monthTransactions), [monthTransactions])
 
   const monthlyData = useMemo(() => {
@@ -115,6 +127,16 @@ export default function Dashboard() {
     setActiveSheet(fabTarget)
   }
 
+  function closeTransactionSheet() {
+    setActiveSheet(null)
+    setEditingTx(null)
+  }
+
+  function startEdit(tx) {
+    setEditingTx(tx)
+    setActiveSheet('transaction')
+  }
+
   return (
     <div className="app-shell">
       <div className="top-header">
@@ -150,7 +172,7 @@ export default function Dashboard() {
 
       {route === 'home' && (
         <>
-          <SummaryCards income={income} expense={expense} />
+          <SummaryCards income={income} expense={expense} carryOver={carryOver} />
           <div className="section">
             <div className="section-header"><h2>Pengeluaran per Kategori</h2></div>
             <CategoryChart data={categoryData} />
@@ -164,7 +186,7 @@ export default function Dashboard() {
               <h2>Transaksi Terakhir</h2>
               <button className="section-link" onClick={() => setRoute('transactions')}>Lihat semua</button>
             </div>
-            <TransactionList transactions={monthTransactions.slice(0, 6)} showFilter={false} />
+            <TransactionList transactions={monthTransactions.slice(0, 6)} showFilter={false} onEdit={startEdit} />
           </div>
         </>
       )}
@@ -187,7 +209,7 @@ export default function Dashboard() {
 
       {route === 'transactions' && (
         <div className="section" style={{ marginTop: 16 }}>
-          <TransactionList transactions={transactions} />
+          <TransactionList transactions={transactions} onEdit={startEdit} />
         </div>
       )}
 
@@ -203,7 +225,7 @@ export default function Dashboard() {
 
       <BottomNav route={route === 'transactions' || route === 'reminders' ? 'more' : route} setRoute={setRoute} />
 
-      {activeSheet === 'transaction' && <TransactionForm onClose={() => setActiveSheet(null)} goals={goals} />}
+      {activeSheet === 'transaction' && <TransactionForm onClose={closeTransactionSheet} goals={goals} editing={editingTx} />}
       {activeSheet === 'goal' && <GoalForm onClose={() => setActiveSheet(null)} />}
       {activeSheet === 'reminder' && <ReminderForm onClose={() => setActiveSheet(null)} />}
     </div>

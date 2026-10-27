@@ -24,7 +24,7 @@ function ReminderRow({ r }) {
     <div className="reminder-row">
       <button
         className={`reminder-check ${r.isPaid ? 'checked' : ''}`}
-        onClick={() => toggleReminderPaid(r.id, r.isPaid)}
+        onClick={() => toggleReminderPaid(r)}
       >
         {r.isPaid && <Check size={13} strokeWidth={3} />}
       </button>
@@ -33,7 +33,9 @@ function ReminderRow({ r }) {
         <div className={`reminder-meta ${dueSoon ? 'due-soon' : 'ok'}`}>{metaText}</div>
       </div>
       <div className="reminder-amount">{formatRupiah(r.amount)}</div>
-      <button className="reminder-delete" onClick={() => deleteReminder(r.id)}>
+      <button className="reminder-delete" onClick={() => {
+        if (window.confirm(`Hapus tagihan "${r.title}"?`)) deleteReminder(r.id)
+      }}>
         <Trash2 size={15} />
       </button>
     </div>

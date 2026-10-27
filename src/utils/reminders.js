@@ -26,8 +26,34 @@ export async function addReminder(userId, data) {
   })
 }
 
-export async function toggleReminderPaid(reminderId, currentValue) {
-  return updateDoc(doc(db, COLLECTION, reminderId), { isPaid: !currentValue })
+// Tanggal jatuh tempo bulan berikutnya (hari dipotong ke akhir bulan kalau perlu, mis. 31 -> 28/30)
+function nextMonthDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const lastDay = new Date(y, m + 1, 0).getDate()
+  const next = new Date(y, m, Math.min(d, lastDay))
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`
+}
+
+// Kalau tagihan berulang ditandai lunas, otomatis bikin tagihan bulan berikutnya (sekali saja)
+export async function toggleReminderPaid(reminder) {
+  const markingPaid = !reminder.isPaid
+  const patch = { isPaid: markingPaid }
+
+  if (markingPaid && reminder.recurring && !reminder.nextCreated) {
+    await addDoc(collection(db, COLLECTION), {
+      userId: reminder.userId,
+      title: reminder.title,
+      amount: reminder.amount,
+      dueDate: nextMonthDate(reminder.dueDate),
+      recurring: true,
+      isPaid: false,
+      createdAt: serverTimestamp(),
+    })
+    patch.nextCreated = true
+  }
+
+  return updateDoc(doc(db, COLLECTION, reminder.id), patch)
 }
 
 export async function deleteReminder(reminderId) {

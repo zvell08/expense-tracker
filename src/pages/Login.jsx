@@ -3,6 +3,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '../firebase'
 
@@ -22,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [info, setInfo] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -43,6 +45,21 @@ export default function Login() {
     }
   }
 
+  async function handleForgot() {
+    setError('')
+    setInfo('')
+    if (!email.trim()) {
+      setError('Isi email dulu, lalu klik Lupa password.')
+      return
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim())
+      setInfo('Link reset password sudah dikirim ke email kamu.')
+    } catch (err) {
+      setError(ERROR_MESSAGES[err.code] || 'Gagal mengirim email reset, coba lagi.')
+    }
+  }
+
   return (
     <div className="auth-shell">
       <div className="auth-card">
@@ -50,6 +67,7 @@ export default function Login() {
         <p className="tagline">Catatan keuangan harian kamu.</p>
 
         {error && <div className="auth-error">{error}</div>}
+        {info && <div className="auth-error" style={{ color: 'var(--income)' }}>{info}</div>}
 
         <form onSubmit={handleSubmit}>
           {mode === 'signup' && (
@@ -95,10 +113,16 @@ export default function Login() {
           </button>
         </form>
 
+        {mode === 'signin' && (
+          <div className="auth-switch">
+            <button type="button" onClick={handleForgot}>Lupa password?</button>
+          </div>
+        )}
+
         <div className="auth-switch">
           {mode === 'signin' ? (
             <>Belum punya akun?{' '}
-              <button onClick={() => { setMode('signup'); setError('') }}>Daftar</button>
+              <button onClick={() => { setMode('signup'); setError(''); setInfo('') }}>Daftar</button>
             </>
           ) : (
             <>Sudah punya akun?{' '}

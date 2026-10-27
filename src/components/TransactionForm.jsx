@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
-import { addTransaction } from '../utils/firestore'
+import { addTransaction, updateTransaction } from '../utils/firestore'
 import { addFundsToGoal } from '../utils/goals'
 import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
-export default function TransactionForm({ onClose, goals = [] }) {
+export default function TransactionForm({ onClose, goals = [], editing = null }) {
   const { user } = useAuth()
-  const [type, setType] = useState('expense')
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].id)
-  const [description, setDescription] = useState('')
-  const [date, setDate] = useState(todayStr())
+  const [type, setType] = useState(editing?.type || 'expense')
+  const [amount, setAmount] = useState(editing ? String(editing.amount) : '')
+  const [category, setCategory] = useState(editing?.category || EXPENSE_CATEGORIES[0].id)
+  const [description, setDescription] = useState(editing?.description || '')
+  const [date, setDate] = useState(editing?.date || todayStr())
   const [submitting, setSubmitting] = useState(false)
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
@@ -38,17 +38,22 @@ export default function TransactionForm({ onClose, goals = [] }) {
         ? (goal?.title || 'Target Keuangan')
         : categories.find((c) => c.id === category)?.label
 
-      await addTransaction(user.uid, {
+      const payload = {
         type,
         amount: amountNum,
         category,
         ...(isGoal ? { categoryLabel, categoryColor: goal?.color || '#A78BFA' } : {}),
         description: description.trim() || categoryLabel,
         date,
-      })
+      }
 
-      if (isGoal && goalId) {
-        await addFundsToGoal(goalId, amountNum)
+      if (editing) {
+        await updateTransaction(editing.id, payload)
+      } else {
+        await addTransaction(user.uid, payload)
+        if (isGoal && goalId) {
+          await addFundsToGoal(goalId, amountNum)
+        }
       }
 
       onClose()
@@ -61,7 +66,7 @@ export default function TransactionForm({ onClose, goals = [] }) {
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet-card" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <h2>Tambah Transaksi</h2>
+        <h2>{editing ? 'Edit Transaksi' : 'Tambah Transaksi'}</h2>
 
         <div className="type-toggle">
           <button
@@ -99,7 +104,7 @@ export default function TransactionForm({ onClose, goals = [] }) {
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
-              {type === 'expense' && goals.length > 0 && (
+              {!editing && type === 'expense' && goals.length > 0 && (
                 <optgroup label="Target Keuangan">
                   {goals.map((g) => (
                     <option key={g.id} value={`goal:${g.id}`}>{g.title}</option>

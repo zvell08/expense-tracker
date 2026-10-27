@@ -45,7 +45,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /transactions/{id} {
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, delete, update: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
     match /goals/{id} {
@@ -157,3 +157,49 @@ firebase deploy
 - Notifikasi push (browser/PWA) untuk tagihan yang mendekati jatuh tempo.
 - Multi-currency atau multi-akun (dompet, rekening, kartu kredit terpisah).
 - Reminder berulang otomatis bikin entri baru tiap bulan (field `recurring` sudah tersedia di data, tinggal ditambah logikanya).
+
+---
+
+## 7. Tambah transaksi lewat Siri Shortcuts (iPhone)
+
+Fitur ini bikin kamu bisa bilang "Hey Siri, catat pengeluaran" dan transaksinya otomatis masuk ke aplikasi, tanpa buka app sama sekali. Cara kerjanya: ada endpoint rahasia (`/api/add-transaction`) yang nulis langsung ke Firestore pakai kredensial admin, dilindungi kode rahasia yang cuma kamu tahu.
+
+### A. Ambil kredensial Firebase Admin
+
+1. Firebase Console → ikon gear ⚙️ (Project Settings) → tab **Service Accounts**
+2. Klik **Generate new private key** → akan ke-download file `.json`
+3. Buka file itu, copy **seluruh isinya** (nanti dipaste jadi satu environment variable)
+
+### B. Cari User ID (UID) akun kamu
+
+1. Firebase Console → **Authentication** → tab **Users**
+2. Cari baris akun kamu, copy nilai di kolom **User UID** (string panjang acak)
+
+### C. Bikin kode rahasia
+
+Bebas, asal panjang dan susah ditebak — contoh: `buku-siri-8f3ak29xz`. Ini yang bakal dipakai Shortcuts buat "membuktikan" request itu beneran dari kamu.
+
+### D. Set Environment Variables di Vercel
+
+Di dashboard Vercel → project kamu → **Environment Variables**, tambahkan 3 ini:
+
+| Key | Value |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | seluruh isi file JSON dari langkah A (paste apa adanya) |
+| `SHORTCUT_SECRET` | kode rahasia dari langkah C |
+| `SHORTCUT_USER_ID` | UID dari langkah B |
+
+Deploy ulang setelah itu: `vercel --prod`
+
+### E. Bikin Shortcut di iPhone
+
+Lihat panduan step-by-step di chat (atau tanya lagi ke Claude kalau butuh diulang).
+
+Format URL yang dipanggil Shortcuts:
+```
+https://domain-kamu.vercel.app/api/add-transaction?secret=KODE_RAHASIA&type=expense&amount=50000&category=makanan&desc=Makan siang
+```
+
+**Daftar `category` yang valid:**
+- Pengeluaran (`type=expense`): `makanan`, `transportasi`, `belanja`, `tagihan`, `hiburan`, `kesehatan`, `pendidikan`, `lainnya`
+- Pemasukan (`type=income`): `gaji`, `bonus`, `usaha`, `lainnya-masuk`

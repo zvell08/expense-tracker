@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
   onSnapshot,
   query,
@@ -32,6 +33,10 @@ export async function addTransaction(userId, transaction) {
     ...transaction,
     createdAt: serverTimestamp(),
   })
+}
+
+export async function updateTransaction(transactionId, data) {
+  return updateDoc(doc(db, COLLECTION, transactionId), data)
 }
 
 export async function deleteTransaction(transactionId) {

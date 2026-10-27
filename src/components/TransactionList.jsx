@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import { formatRupiah, formatDate } from '../utils/format'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { resolveCategoryDisplay } from '../utils/aggregate'
@@ -9,7 +9,7 @@ function initials(label) {
   return label.trim().charAt(0).toUpperCase()
 }
 
-export default function TransactionList({ transactions, showFilter = true }) {
+export default function TransactionList({ transactions, showFilter = true, onEdit }) {
   const [filter, setFilter] = useState('all')
 
   const allCategories = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]
@@ -55,7 +55,18 @@ export default function TransactionList({ transactions, showFilter = true }) {
             <div className={`tx-amount ${t.type}`}>
               {t.type === 'income' ? '+' : '-'}{formatRupiah(t.amount)}
             </div>
-            <button className="tx-delete" onClick={() => deleteTransaction(t.id)} title="Hapus">
+            {onEdit && !t.category?.startsWith('goal:') && (
+              <button className="tx-delete tx-edit" onClick={() => onEdit(t)} title="Edit">
+                <Pencil size={15} />
+              </button>
+            )}
+            <button
+              className="tx-delete"
+              onClick={() => {
+                if (window.confirm(`Hapus transaksi "${t.description}"?`)) deleteTransaction(t.id)
+              }}
+              title="Hapus"
+            >
               <Trash2 size={15} />
             </button>
           </div>

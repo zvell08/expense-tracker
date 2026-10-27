@@ -13,16 +13,27 @@
 // Field opsional: desc (default = nama kategori), date (default = hari ini, format YYYY-MM-DD)
 
 import admin from 'firebase-admin'
+import { timingSafeEqual } from 'node:crypto'
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-    ),
-  })
+// Inisialisasi lazy supaya env var yang kosong/salah jadi respons 500 yang jelas, bukan crash
+function getDb() {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(
+        JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+      ),
+    })
+  }
+  return admin.firestore()
 }
 
-const db = admin.firestore()
+function secretMatches(given) {
+  const expected = process.env.SHORTCUT_SECRET
+  if (!expected || typeof given !== 'string') return false
+  const a = Buffer.from(given)
+  const b = Buffer.from(expected)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 const EXPENSE_LABELS = {
   makanan: 'Makanan & Minuman', transportasi: 'Transportasi', belanja: 'Belanja',
@@ -51,7 +62,9 @@ function normalizeCategory(raw) {
 export default async function handler(req, res) {
   const params = req.method === 'GET' ? req.query : req.body
 
-  if (!params || params.secret !== process.env.SHORTCUT_SECRET) {
+  // Secret boleh lewat header "x-secret" (lebih aman, tidak masuk log URL) atau parameter "secret"
+  const givenSecret = req.headers['x-secret'] || params?.secret
+  if (!params || !secretMatches(givenSecret)) {
     return res.status(401).json({ ok: false, error: 'Kode rahasia salah atau tidak ada.' })
   }
 
@@ -76,6 +89,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const db = getDb()
     await db.collection('transactions').add({
       userId: process.env.SHORTCUT_USER_ID,
       type,
