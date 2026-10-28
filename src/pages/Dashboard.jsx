@@ -236,7 +236,7 @@ export default function Dashboard() {
   return (
     <DataProvider value={dataValue}>
     <div className="app-shell">
-      <div className="top-header">
+      <div className={`top-header${route === 'home' && hasMultipleWallets ? ' stacked' : ''}`}>
         <div className="header-back">
           {isSubRoute && (
             <button className="icon-btn" onClick={() => setRoute('more')}>

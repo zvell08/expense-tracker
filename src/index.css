@@ -717,3 +717,12 @@ button { cursor: pointer; }
   font-family: var(--font-mono); font-size: 24px; font-weight: 600;
   color: var(--ink); margin-top: 4px;
 }
+
+/* Header Beranda saat ada lebih dari satu dompet: judul di atas, dua pilihan (dompet & bulan) sebaris di bawahnya */
+.top-header.stacked { flex-wrap: wrap; row-gap: 14px; align-items: flex-start; }
+.top-header.stacked .header-pills { width: 100%; }
+.top-header.stacked .wallet-pill { flex: 1 1 0; max-width: none; min-width: 0; }
+.top-header.stacked .header-pills .month-pill:not(.wallet-pill) { flex: 1 1 0; min-width: 0; }
+.header-pills .month-pill {
+  text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+}
