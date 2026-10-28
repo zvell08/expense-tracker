@@ -1,11 +1,27 @@
-export function formatRupiah(amount) {
+export const CURRENCIES = [
+  { code: 'IDR', label: 'IDR (Rupiah)' },
+  { code: 'SAR', label: 'SAR (Riyal Saudi)' },
+]
+
+// Format uang sesuai mata uang. Tidak ada konversi kurs: tiap dompet punya mata uangnya sendiri.
+export function formatMoney(amount, currency = 'IDR') {
   const value = Number(amount) || 0
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
-    currency: 'IDR',
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+export function formatRupiah(amount) {
+  return formatMoney(amount, 'IDR')
+}
+
+// Label sumbu Y chart: "50rb" untuk Rupiah, angka ringkas (1.2K) untuk mata uang lain
+export function formatAxisTick(value, currency = 'IDR') {
+  if (currency === 'IDR') return `${Math.round(value / 1000)}rb`
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 }
 
 // Terima input angka dalam format apa aja yang wajar: "3.5", "3,5", "1.500,50",

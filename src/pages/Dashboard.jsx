@@ -26,6 +26,7 @@ import { subscribeReminders } from '../utils/reminders'
 import { subscribeCustomCategories } from '../utils/customCategories'
 import {
   MAIN_WALLET, subscribeWallets, subscribeTransfers, walletIdOf,
+  currencyOfWallet, currencyOfTransaction,
 } from '../utils/wallets'
 import { DataProvider } from '../context/DataContext.jsx'
 import { aggregateByCategory, sumByType } from '../utils/aggregate'
@@ -77,6 +78,7 @@ export default function Dashboard() {
   const [transfers, setTransfers] = useState([])
   const [permissionError, setPermissionError] = useState(false)
   const [walletFilter, setWalletFilter] = useState('all')
+  const [currency, setCurrency] = useState('IDR')
 
   const now = new Date()
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
@@ -101,15 +103,33 @@ export default function Dashboard() {
     }
   }, [user])
 
-  // Kalau dompet yang lagi difilter sudah dihapus, balik ke "semua dompet"
-  const activeWalletFilter = walletFilter === 'all' || wallets.some((w) => w.id === walletFilter)
+  // Mata uang yang tersedia = mata uang dompet yang ada. Tiap mata uang dilihat terpisah
+  // (tanpa konversi kurs); kalau mata uang terpilih sudah tidak ada, balik ke IDR.
+  const currencies = useMemo(
+    () => [...new Set(wallets.map(currencyOfWallet))].sort(),
+    [wallets]
+  )
+  const hasMultipleCurrencies = currencies.length > 1
+  const activeCurrency = currencies.includes(currency) ? currency : 'IDR'
+  const currencyWallets = useMemo(
+    () => wallets.filter((w) => currencyOfWallet(w) === activeCurrency),
+    [wallets, activeCurrency]
+  )
+
+  // Kalau dompet yang lagi difilter sudah dihapus atau beda mata uang, balik ke "semua dompet"
+  const activeWalletFilter = walletFilter === 'all' || currencyWallets.some((w) => w.id === walletFilter)
     ? walletFilter
     : 'all'
 
+  const currencyTransactions = useMemo(
+    () => transactions.filter((t) => currencyOfTransaction(t, wallets) === activeCurrency),
+    [transactions, wallets, activeCurrency]
+  )
+
   const scopedTransactions = useMemo(() => {
-    if (activeWalletFilter === 'all') return transactions
-    return transactions.filter((t) => walletIdOf(t) === activeWalletFilter)
-  }, [transactions, activeWalletFilter])
+    if (activeWalletFilter === 'all') return currencyTransactions
+    return currencyTransactions.filter((t) => walletIdOf(t) === activeWalletFilter)
+  }, [currencyTransactions, activeWalletFilter])
 
   const inSelectedMonth = (list) => list.filter((t) => {
     const d = new Date(t.date)
@@ -124,9 +144,9 @@ export default function Dashboard() {
 
   // Anggaran tidak ikut filter dompet, karena budget berlaku untuk semua dompet
   const allMonthTransactions = useMemo(
-    () => inSelectedMonth(transactions),
+    () => inSelectedMonth(currencyTransactions),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [transactions, selectedYear, selectedMonth]
+    [currencyTransactions, selectedYear, selectedMonth]
   )
 
   const income = sumByType(monthTransactions, 'income')
@@ -145,7 +165,7 @@ export default function Dashboard() {
       )
 
     if (activeWalletFilter === 'all') {
-      const initial = wallets.reduce((sum, w) => sum + (Number(w.initialBalance) || 0), 0)
+      const initial = currencyWallets.reduce((sum, w) => sum + (Number(w.initialBalance) || 0), 0)
       return { carryOver: fromTx + initial, monthTransfer: 0 }
     }
 
@@ -162,7 +182,7 @@ export default function Dashboard() {
         .filter((tr) => tr.date >= startStr && tr.date < endStr)
         .reduce((s, tr) => s + net(tr), 0),
     }
-  }, [scopedTransactions, wallets, transfers, activeWalletFilter, selectedYear, selectedMonth])
+  }, [scopedTransactions, wallets, currencyWallets, transfers, activeWalletFilter, selectedYear, selectedMonth])
 
   const categoryData = useMemo(
     () => aggregateByCategory(monthTransactions, customCategories),
@@ -221,7 +241,8 @@ export default function Dashboard() {
   }
 
   const dataValue = { customCategories, wallets, transfers, permissionError }
-  const hasMultipleWallets = wallets.length > 1
+  const hasWalletPicker = currencyWallets.length > 1
+  const showCurrencyToggle = hasMultipleCurrencies && ['home', 'budget', 'reports'].includes(route)
 
   function closeTransactionSheet() {
     setActiveSheet(null)
@@ -236,7 +257,7 @@ export default function Dashboard() {
   return (
     <DataProvider value={dataValue}>
     <div className="app-shell">
-      <div className={`top-header${route === 'home' && hasMultipleWallets ? ' stacked' : ''}`}>
+      <div className={`top-header${route === 'home' && (hasWalletPicker || hasMultipleCurrencies) ? ' stacked' : ''}`}>
         <div className="header-back">
           {isSubRoute && (
             <button className="icon-btn" onClick={() => setRoute('more')}>
@@ -249,48 +270,64 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {route === 'home' && (
+        {(route === 'home' || showCurrencyToggle) && (
           <div className="header-pills">
-            {hasMultipleWallets && (
+            {showCurrencyToggle && (
+              <div className="currency-toggle">
+                {currencies.map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    className={code === activeCurrency ? 'active' : ''}
+                    onClick={() => setCurrency(code)}
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+            )}
+            {route === 'home' && hasWalletPicker && (
               <select
                 className="month-pill wallet-pill"
                 value={activeWalletFilter}
                 onChange={(e) => setWalletFilter(e.target.value)}
               >
-                <option value="all">Semua dompet</option>
-                {wallets.map((w) => (
+                <option value="all">{hasMultipleCurrencies ? `Semua ${activeCurrency}` : 'Semua dompet'}</option>
+                {currencyWallets.map((w) => (
                   <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
             )}
-            <select
-              className="month-pill"
-              value={`${selectedYear}-${selectedMonth}`}
-              onChange={(e) => {
-                const [y, m] = e.target.value.split('-').map(Number)
-                setSelectedYear(y); setSelectedMonth(m)
-              }}
-            >
-              {monthOptions.map(({ y, m }) => (
-                <option key={`${y}-${m}`} value={`${y}-${m}`}>
-                  {MONTH_NAMES[m].slice(0, 3)} {y}
-                </option>
-              ))}
-            </select>
+            {route === 'home' && (
+              <select
+                className="month-pill"
+                value={`${selectedYear}-${selectedMonth}`}
+                onChange={(e) => {
+                  const [y, m] = e.target.value.split('-').map(Number)
+                  setSelectedYear(y); setSelectedMonth(m)
+                }}
+              >
+                {monthOptions.map(({ y, m }) => (
+                  <option key={`${y}-${m}`} value={`${y}-${m}`}>
+                    {MONTH_NAMES[m].slice(0, 3)} {y}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         )}
       </div>
 
       {route === 'home' && (
         <>
-          <SummaryCards income={income} expense={expense} carryOver={carryOver} transfer={monthTransfer} />
+          <SummaryCards income={income} expense={expense} carryOver={carryOver} transfer={monthTransfer} currency={activeCurrency} />
           <div className="section">
             <div className="section-header"><h2>Pengeluaran per Kategori</h2></div>
-            <CategoryChart data={categoryData} />
+            <CategoryChart data={categoryData} currency={activeCurrency} />
           </div>
           <div className="section">
             <div className="section-header"><h2>Tren 6 Bulan</h2></div>
-            <MonthlyChart data={monthlyData} />
+            <MonthlyChart data={monthlyData} currency={activeCurrency} />
           </div>
           <div className="section">
             <div className="section-header">
@@ -303,11 +340,11 @@ export default function Dashboard() {
       )}
 
       {route === 'budget' && (
-        <BudgetPage monthTransactions={allMonthTransactions} budgets={budgets} />
+        <BudgetPage monthTransactions={allMonthTransactions} budgets={budgets} currency={activeCurrency} />
       )}
 
       {route === 'reports' && (
-        <ReportsPage transactions={transactions} />
+        <ReportsPage transactions={currencyTransactions} currency={activeCurrency} />
       )}
 
       {route === 'goals' && (
@@ -353,7 +390,7 @@ export default function Dashboard() {
           onClose={closeTransactionSheet}
           goals={goals}
           editing={editingTx}
-          defaultWalletId={activeWalletFilter === 'all' ? undefined : activeWalletFilter}
+          defaultWalletId={activeWalletFilter === 'all' ? currencyWallets[0]?.id : activeWalletFilter}
         />
       )}
       {activeSheet === 'goal' && <GoalForm onClose={() => setActiveSheet(null)} />}

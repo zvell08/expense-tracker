@@ -726,3 +726,15 @@ button { cursor: pointer; }
 .header-pills .month-pill {
   text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
 }
+
+/* Pilihan mata uang (muncul kalau ada dompet dengan mata uang berbeda) */
+.currency-toggle {
+  display: flex; flex-shrink: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px; box-shadow: var(--shadow-sm);
+}
+.currency-toggle button {
+  border: none; background: none; color: var(--ink-soft);
+  padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+}
+.currency-toggle button.active { background: var(--accent); color: #04150E; }

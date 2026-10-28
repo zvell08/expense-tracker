@@ -101,6 +101,7 @@ Buka `http://localhost:5173` di browser. Daftar akun baru (email + password), la
 - **Tagihan & Reminder** — catat tagihan berulang, tandai lunas, highlight otomatis kalau jatuh tempo ≤3 hari
 - **Kategori custom** — menu Lainnya → Kategori: buat, ubah nama/warna, dan hapus kategori pengeluaran & pemasukan sendiri
 - **Multi-dompet** — menu Lainnya → Dompet: banyak dompet (bank, e-wallet, tunai) dengan saldo awal, transfer antar dompet, dan filter dompet di Beranda
+- **Mata uang IDR & SAR** — tiap dompet punya mata uang sendiri (tanpa kurs; Dompet Utama juga bisa diubah nama dan mata uangnya). Beranda, Anggaran, dan Laporan punya pilihan IDR/SAR; transfer hanya antar dompet dengan mata uang sama
 
 ## 4. Struktur project
 

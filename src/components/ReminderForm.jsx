@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { addReminder } from '../utils/reminders'
-import { parseAmount } from '../utils/format'
+import { parseAmount, CURRENCIES } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
@@ -9,6 +9,7 @@ export default function ReminderForm({ onClose }) {
   const { user } = useAuth()
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
+  const [currency, setCurrency] = useState('IDR')
   const [dueDate, setDueDate] = useState(todayStr())
   const [recurring, setRecurring] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -22,6 +23,7 @@ export default function ReminderForm({ onClose }) {
       await addReminder(user.uid, {
         title: title.trim(),
         amount: amountNum,
+        currency,
         dueDate,
         recurring,
       })
@@ -49,7 +51,13 @@ export default function ReminderForm({ onClose }) {
             />
           </div>
           <div className="field">
-            <label htmlFor="r-amount">Jumlah (Rp)</label>
+            <label htmlFor="r-currency">Mata Uang</label>
+            <select id="r-currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="r-amount">Jumlah ({currency})</label>
             <input
               id="r-amount"
               type="text"

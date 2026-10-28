@@ -8,7 +8,7 @@ import {
   aggregateByCategory, sumByType,
 } from '../utils/aggregate'
 import { exportReportToExcel } from '../utils/exportExcel'
-import { formatRupiah } from '../utils/format'
+import { formatMoney, formatAxisTick } from '../utils/format'
 import { useData } from '../context/DataContext.jsx'
 
 const PERIODS = [
@@ -17,7 +17,8 @@ const PERIODS = [
   { id: 'year', label: 'Tahun' },
 ]
 
-export default function ReportsPage({ transactions }) {
+export default function ReportsPage({ transactions, currency = 'IDR' }) {
+  const formatRupiah = (n) => formatMoney(n, currency)
   const { customCategories, wallets } = useData()
   const [periodType, setPeriodType] = useState('month')
   const [refDate, setRefDate] = useState(new Date())
@@ -45,6 +46,7 @@ export default function ReportsPage({ transactions }) {
       categoryData,
       customCategories,
       wallets,
+      currency,
     })
   }
 
@@ -99,7 +101,7 @@ export default function ReportsPage({ transactions }) {
             <YAxis
               axisLine={false} tickLine={false} fontSize={10}
               stroke="var(--ink-soft)"
-              tickFormatter={(v) => `${Math.round(v / 1000)}rb`}
+              tickFormatter={(v) => formatAxisTick(v, currency)}
               width={38}
             />
             <Tooltip

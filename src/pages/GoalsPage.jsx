@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import GoalRing from '../components/GoalRing.jsx'
 import { addFundsToGoal, deleteGoal, GOAL_COLORS } from '../utils/goals'
-import { formatRupiah, parseAmount } from '../utils/format'
+import { formatMoney, parseAmount } from '../utils/format'
 
 function GoalCard({ goal, index }) {
   const [adding, setAdding] = useState(false)
@@ -25,7 +25,7 @@ function GoalCard({ goal, index }) {
       <div className="goal-info">
         <div className="goal-title">{goal.title}</div>
         <div className="goal-amounts">
-          {formatRupiah(goal.currentAmount)} / {formatRupiah(goal.targetAmount)}
+          {formatMoney(goal.currentAmount, goal.currency || 'IDR')} / {formatMoney(goal.targetAmount, goal.currency || 'IDR')}
         </div>
         {adding && (
           <div className="budget-edit-row" style={{ marginTop: 8 }}>

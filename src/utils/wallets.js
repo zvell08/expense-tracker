@@ -1,6 +1,6 @@
 import {
   collection, addDoc, deleteDoc, doc, onSnapshot, query, where,
-  serverTimestamp, updateDoc,
+  serverTimestamp, updateDoc, setDoc,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -9,6 +9,7 @@ export const MAIN_WALLET_ID = 'main'
 export const MAIN_WALLET = {
   id: MAIN_WALLET_ID,
   name: 'Dompet Utama',
+  currency: 'IDR',
   color: '#10B981',
   initialBalance: 0,
   isMain: true,
@@ -18,18 +19,42 @@ export function walletIdOf(transaction) {
   return transaction.walletId || MAIN_WALLET_ID
 }
 
+// Dompet lama (tanpa field currency) dianggap IDR
+export function currencyOfWallet(wallet) {
+  return wallet?.currency || 'IDR'
+}
+
+export function currencyOfTransaction(transaction, wallets) {
+  return currencyOfWallet(wallets.find((w) => w.id === walletIdOf(transaction)))
+}
+
 // ---------- Dompet ----------
 
+// Pengaturan Dompet Utama (nama, mata uang, dll) disimpan sebagai satu dokumen di collection
+// wallets dengan id "main_<uid>" dan flag isMain, lalu digabung ke MAIN_WALLET (id tetap "main").
 export function subscribeWallets(userId, callback, onError) {
   const q = query(collection(db, 'wallets'), where('userId', '==', userId))
   return onSnapshot(
     q,
     (snap) => {
-      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      const mainOverride = docs.find((w) => w.isMain)
+      const items = docs.filter((w) => !w.isMain)
       items.sort((a, b) => a.name.localeCompare(b.name, 'id'))
-      callback([MAIN_WALLET, ...items])
+      const main = mainOverride
+        ? { ...MAIN_WALLET, ...mainOverride, id: MAIN_WALLET_ID, isMain: true }
+        : MAIN_WALLET
+      callback([main, ...items])
     },
     onError
+  )
+}
+
+export async function saveMainWallet(userId, data) {
+  return setDoc(
+    doc(db, 'wallets', `main_${userId}`),
+    { userId, isMain: true, ...data },
+    { merge: true }
   )
 }
 

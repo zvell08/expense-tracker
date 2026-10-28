@@ -8,12 +8,14 @@ function sanitizeFileName(text) {
 
 export function exportReportToExcel({
   periodLabel, income, expense, transactions, categoryData, customCategories = [], wallets = [],
+  currency = 'IDR',
 }) {
   const wb = XLSX.utils.book_new()
 
   // Sheet 1: Ringkasan
   const summaryRows = [
     { Keterangan: 'Periode', Nilai: periodLabel },
+    { Keterangan: 'Mata Uang', Nilai: currency },
     { Keterangan: 'Total Pemasukan', Nilai: income },
     { Keterangan: 'Total Pengeluaran', Nilai: expense },
     { Keterangan: 'Selisih', Nilai: income - expense },
@@ -52,6 +54,6 @@ export function exportReportToExcel({
   wsCat['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 12 }]
   XLSX.utils.book_append_sheet(wb, wsCat, 'Per Kategori')
 
-  const fileName = `Laporan-Keuangan-${sanitizeFileName(periodLabel)}.xlsx`
+  const fileName = `Laporan-Keuangan-${currency}-${sanitizeFileName(periodLabel)}.xlsx`
   XLSX.writeFile(wb, fileName)
 }

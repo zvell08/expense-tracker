@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { Pencil, Trash2, ArrowLeftRight } from 'lucide-react'
-import { computeWalletBalances, deleteWallet, deleteTransfer, walletIdOf } from '../utils/wallets'
-import { formatRupiah, formatDate } from '../utils/format'
+import {
+  computeWalletBalances, deleteWallet, deleteTransfer, walletIdOf, currencyOfWallet,
+} from '../utils/wallets'
+import { formatMoney, formatDate } from '../utils/format'
 import { useData } from '../context/DataContext.jsx'
 
 export default function WalletsPage({ transactions, onEdit, onTransfer }) {
@@ -11,7 +13,17 @@ export default function WalletsPage({ transactions, onEdit, onTransfer }) {
     () => computeWalletBalances(wallets, transactions, transfers),
     [wallets, transactions, transfers]
   )
-  const total = wallets.reduce((sum, w) => sum + (balances[w.id] || 0), 0)
+  // Total dihitung terpisah per mata uang (tidak ada konversi kurs)
+  const totalsByCurrency = wallets.reduce((acc, w) => {
+    const code = currencyOfWallet(w)
+    acc[code] = (acc[code] || 0) + (balances[w.id] || 0)
+    return acc
+  }, {})
+  // Transfer butuh minimal dua dompet dengan mata uang yang sama
+  const canTransfer = wallets.some((w) =>
+    wallets.some((o) => o.id !== w.id && currencyOfWallet(o) === currencyOfWallet(w))
+  )
+  const moneyOf =(w, amount) => formatMoney(amount, currencyOfWallet(w))
   const nameOf = (id) => wallets.find((w) => w.id === id)?.name || 'Dompet dihapus'
 
   async function handleDelete(wallet) {
@@ -40,10 +52,12 @@ export default function WalletsPage({ transactions, onEdit, onTransfer }) {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="empty-note" style={{ margin: 0 }}>Total semua dompet</div>
-        <div className="wallet-total">{formatRupiah(total)}</div>
+        {Object.entries(totalsByCurrency).map(([code, amount]) => (
+          <div className="wallet-total" key={code}>{formatMoney(amount, code)}</div>
+        ))}
       </div>
 
-      {wallets.length > 1 && (
+      {canTransfer && (
         <button className="export-btn" onClick={onTransfer} style={{ marginBottom: 16 }}>
           <ArrowLeftRight size={15} /> Transfer Antar Dompet
         </button>
@@ -57,20 +71,18 @@ export default function WalletsPage({ transactions, onEdit, onTransfer }) {
             </div>
             <div className="tx-info">
               <div className="tx-desc">{w.name}</div>
-              <div className="tx-meta">{w.isMain ? 'Dompet bawaan' : `Saldo awal ${formatRupiah(w.initialBalance || 0)}`}</div>
+              <div className="tx-meta">{w.isMain && !(Number(w.initialBalance) > 0) ? 'Dompet bawaan' : `Saldo awal ${moneyOf(w, w.initialBalance || 0)}`}</div>
             </div>
             <div className={`tx-amount ${(balances[w.id] || 0) >= 0 ? 'income' : 'expense'}`}>
-              {formatRupiah(balances[w.id] || 0)}
+              {moneyOf(w, balances[w.id] || 0)}
             </div>
+            <button className="tx-delete tx-edit" onClick={() => onEdit(w)} title="Edit">
+              <Pencil size={15} />
+            </button>
             {!w.isMain && (
-              <>
-                <button className="tx-delete tx-edit" onClick={() => onEdit(w)} title="Edit">
-                  <Pencil size={15} />
-                </button>
-                <button className="tx-delete" onClick={() => handleDelete(w)} title="Hapus">
-                  <Trash2 size={15} />
-                </button>
-              </>
+              <button className="tx-delete" onClick={() => handleDelete(w)} title="Hapus">
+                <Trash2 size={15} />
+              </button>
             )}
           </div>
         ))}
@@ -97,7 +109,9 @@ export default function WalletsPage({ transactions, onEdit, onTransfer }) {
                   <div className="tx-desc">{nameOf(tr.fromWalletId)} → {nameOf(tr.toWalletId)}</div>
                   <div className="tx-meta">{tr.note ? `${tr.note} · ` : ''}{formatDate(tr.date)}</div>
                 </div>
-                <div className="tx-amount">{formatRupiah(tr.amount)}</div>
+                <div className="tx-amount">
+                  {formatMoney(tr.amount, currencyOfWallet(wallets.find((w) => w.id === tr.fromWalletId)))}
+                </div>
                 <button
                   className="tx-delete"
                   onClick={() => {

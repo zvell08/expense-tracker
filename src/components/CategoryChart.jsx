@@ -1,7 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { formatRupiah } from '../utils/format'
+import { formatMoney } from '../utils/format'
 
-export default function CategoryChart({ data }) {
+export default function CategoryChart({ data, currency = 'IDR' }) {
   const total = data.reduce((sum, d) => sum + d.value, 0)
 
   if (data.length === 0) {
@@ -33,7 +33,7 @@ export default function CategoryChart({ data }) {
             contentStyle={{ background: '#1F232C', border: '1px solid #262B35', borderRadius: 10, fontSize: 12.5 }}
             labelStyle={{ color: '#F3F4F6' }}
             itemStyle={{ color: '#F3F4F6' }}
-            formatter={(value) => formatRupiah(value)}
+            formatter={(value) => formatMoney(value, currency)}
           />
         </PieChart>
       </ResponsiveContainer>
@@ -45,7 +45,7 @@ export default function CategoryChart({ data }) {
               <span className="legend-dot" style={{ background: entry.color }} />
               <span>{entry.label}</span>
               <span className="amount">
-                {formatRupiah(entry.value)}
+                {formatMoney(entry.value, currency)}
                 <span className="pct">({Math.round((entry.value / total) * 100)}%)</span>
               </span>
             </div>

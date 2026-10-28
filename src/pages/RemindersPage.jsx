@@ -1,6 +1,6 @@
 import { Check, Trash2 } from 'lucide-react'
 import { toggleReminderPaid, deleteReminder } from '../utils/reminders'
-import { formatRupiah, formatDate } from '../utils/format'
+import { formatMoney, formatDate } from '../utils/format'
 
 function daysUntil(dateStr) {
   const today = new Date()
@@ -32,7 +32,7 @@ function ReminderRow({ r }) {
         <div className={`reminder-title ${r.isPaid ? 'paid' : ''}`}>{r.title}</div>
         <div className={`reminder-meta ${dueSoon ? 'due-soon' : 'ok'}`}>{metaText}</div>
       </div>
-      <div className="reminder-amount">{formatRupiah(r.amount)}</div>
+      <div className="reminder-amount">{formatMoney(r.amount, r.currency || 'IDR')}</div>
       <button className="reminder-delete" onClick={() => {
         if (window.confirm(`Hapus tagihan "${r.title}"?`)) deleteReminder(r.id)
       }}>

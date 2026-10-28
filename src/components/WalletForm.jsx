@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import ColorSwatches from './ColorSwatches.jsx'
 import { CATEGORY_COLORS } from '../utils/categories'
-import { addWallet, updateWallet } from '../utils/wallets'
-import { parseAmount } from '../utils/format'
+import { addWallet, updateWallet, saveMainWallet } from '../utils/wallets'
+import { parseAmount, CURRENCIES } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function WalletForm({ onClose, editing = null }) {
@@ -11,6 +11,7 @@ export default function WalletForm({ onClose, editing = null }) {
   const [initialBalance, setInitialBalance] = useState(
     editing ? String(editing.initialBalance || 0) : ''
   )
+  const [currency, setCurrency] = useState(editing?.currency || 'IDR')
   const [color, setColor] = useState(editing?.color || CATEGORY_COLORS[1])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -23,8 +24,10 @@ export default function WalletForm({ onClose, editing = null }) {
     setSubmitting(true)
     setError('')
     try {
-      const data = { name: name.trim(), color, initialBalance: balance }
-      if (editing) {
+      const data = { name: name.trim(), color, initialBalance: balance, currency }
+      if (editing?.isMain) {
+        await saveMainWallet(user.uid, data)
+      } else if (editing) {
         await updateWallet(editing.id, data)
       } else {
         await addWallet(user.uid, data)
@@ -62,7 +65,28 @@ export default function WalletForm({ onClose, editing = null }) {
             />
           </div>
           <div className="field">
-            <label htmlFor="w-balance">Saldo Awal (Rp)</label>
+            <label htmlFor="w-currency">Mata Uang</label>
+            <select
+              id="w-currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              disabled={!!editing && !editing.isMain}
+            >
+              {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+            </select>
+            {editing && !editing.isMain && (
+              <p className="empty-note" style={{ marginTop: 6, marginBottom: 0 }}>
+                Mata uang dompet tidak bisa diubah setelah dibuat.
+              </p>
+            )}
+            {editing?.isMain && currency !== (editing.currency || 'IDR') && (
+              <p className="empty-note" style={{ marginTop: 6, marginBottom: 0 }}>
+                Perhatian: transaksi lama di dompet ini akan dibaca sebagai {currency}, angkanya tidak dikonversi.
+              </p>
+            )}
+          </div>
+          <div className="field">
+            <label htmlFor="w-balance">Saldo Awal ({currency})</label>
             <input
               id="w-balance"
               type="text"

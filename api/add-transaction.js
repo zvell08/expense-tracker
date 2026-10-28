@@ -124,7 +124,8 @@ export default async function handler(req, res) {
       if (!match) {
         return res.status(400).json({ ok: false, error: `wallet "${rawWallet}" tidak ditemukan.` })
       }
-      walletId = match.id
+      // Dokumen pengaturan Dompet Utama (isMain) tetap dipakai sebagai id "main"
+      walletId = match.data().isMain ? 'main' : match.id
     }
 
     await db.collection('transactions').add({

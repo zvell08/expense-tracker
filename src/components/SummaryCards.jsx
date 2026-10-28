@@ -1,6 +1,7 @@
-import { formatRupiah } from '../utils/format'
+import { formatMoney } from '../utils/format'
 
-export default function SummaryCards({ income, expense, carryOver = 0, transfer = 0 }) {
+export default function SummaryCards({ income, expense, carryOver = 0, transfer = 0, currency = 'IDR' }) {
+  const formatRupiah = (n) => formatMoney(n, currency)
   // Saldo = sisa dari bulan-bulan sebelumnya + pemasukan - pengeluaran bulan ini
   // (+ transfer bersih bulan ini, hanya relevan kalau lagi lihat satu dompet)
   const balance = carryOver + income - expense + transfer

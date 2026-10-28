@@ -3,7 +3,7 @@ import { deleteField } from 'firebase/firestore'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { addTransaction, updateTransaction } from '../utils/firestore'
 import { addFundsToGoal } from '../utils/goals'
-import { MAIN_WALLET_ID } from '../utils/wallets'
+import { MAIN_WALLET_ID, currencyOfWallet } from '../utils/wallets'
 import { parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useData } from '../context/DataContext.jsx'
@@ -25,6 +25,19 @@ export default function TransactionForm({
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const walletCurrency = currencyOfWallet(wallets.find((w) => w.id === walletId))
+  // Target keuangan hanya bisa dipilih kalau mata uangnya sama dengan dompet
+  const goalsForWallet = goals.filter((g) => (g.currency || 'IDR') === walletCurrency)
+
+  function handleWalletChange(nextId) {
+    setWalletId(nextId)
+    if (category.startsWith('goal:')) {
+      const nextCurrency = currencyOfWallet(wallets.find((w) => w.id === nextId))
+      const goal = goals.find((g) => g.id === category.slice(5))
+      if ((goal?.currency || 'IDR') !== nextCurrency) setCategory(EXPENSE_CATEGORIES[0].id)
+    }
+  }
 
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
   const customForType = customCategories.filter((c) => c.type === type)
@@ -135,7 +148,7 @@ export default function TransactionForm({
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="amount">Jumlah (Rp)</label>
+            <label htmlFor="amount">Jumlah ({walletCurrency})</label>
             <input
               id="amount"
               type="text"
@@ -162,9 +175,9 @@ export default function TransactionForm({
               {orphan && (
                 <option value={orphan.category}>{orphan.categoryLabel} (dihapus)</option>
               )}
-              {!editing && type === 'expense' && goals.length > 0 && (
+              {!editing && type === 'expense' && goalsForWallet.length > 0 && (
                 <optgroup label="Target Keuangan">
-                  {goals.map((g) => (
+                  {goalsForWallet.map((g) => (
                     <option key={g.id} value={`goal:${g.id}`}>{g.title}</option>
                   ))}
                 </optgroup>
@@ -179,9 +192,9 @@ export default function TransactionForm({
           {wallets.length > 1 && (
             <div className="field">
               <label htmlFor="wallet">Dompet</label>
-              <select id="wallet" value={walletId} onChange={(e) => setWalletId(e.target.value)}>
+              <select id="wallet" value={walletId} onChange={(e) => handleWalletChange(e.target.value)}>
                 {wallets.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
+                  <option key={w.id} value={w.id}>{w.name} ({currencyOfWallet(w)})</option>
                 ))}
               </select>
             </div>

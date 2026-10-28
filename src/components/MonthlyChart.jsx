@@ -1,9 +1,9 @@
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
 } from 'recharts'
-import { formatRupiah } from '../utils/format'
+import { formatMoney, formatAxisTick } from '../utils/format'
 
-export default function MonthlyChart({ data }) {
+export default function MonthlyChart({ data, currency = 'IDR' }) {
   return (
     <div className="card">
       <ResponsiveContainer width="100%" height={200}>
@@ -21,7 +21,7 @@ export default function MonthlyChart({ data }) {
             tickLine={false}
             fontSize={10.5}
             stroke="var(--ink-soft)"
-            tickFormatter={(v) => `${Math.round(v / 1000)}rb`}
+            tickFormatter={(v) => formatAxisTick(v, currency)}
             width={40}
           />
           <Tooltip
@@ -30,7 +30,7 @@ export default function MonthlyChart({ data }) {
             itemStyle={{ color: '#F3F4F6' }}
             cursor={{ fill: 'rgba(255,255,255,0.04)' }}
             formatter={(value, name) => [
-              formatRupiah(value),
+              formatMoney(value, currency),
               name === 'income' ? 'Pemasukan' : 'Pengeluaran',
             ]}
           />

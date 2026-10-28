@@ -45,6 +45,7 @@ export async function toggleReminderPaid(reminder) {
       userId: reminder.userId,
       title: reminder.title,
       amount: reminder.amount,
+      currency: reminder.currency || 'IDR',
       dueDate: nextMonthDate(reminder.dueDate),
       recurring: true,
       isPaid: false,

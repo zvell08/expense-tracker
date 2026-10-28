@@ -3,12 +3,13 @@ import { Pencil } from 'lucide-react'
 import GoalRing from '../components/GoalRing.jsx'
 import { categoriesForType } from '../utils/categories'
 import { useData } from '../context/DataContext.jsx'
-import { setBudget } from '../utils/budgets'
-import { formatRupiah, parseAmount } from '../utils/format'
+import { setBudget, budgetKey } from '../utils/budgets'
+import { formatMoney, parseAmount } from '../utils/format'
 import { useAuth } from '../context/AuthContext.jsx'
 
-function BudgetRow({ category, spent, budget }) {
+function BudgetRow({ category, spent, budget, currency }) {
   const { user } = useAuth()
+  const formatRupiah = (n) => formatMoney(n, currency)
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(budget || '')
 
@@ -19,7 +20,7 @@ function BudgetRow({ category, spent, budget }) {
   async function handleSave() {
     const parsed = parseAmount(value)
     if (Number.isFinite(parsed) && parsed >= 0) {
-      await setBudget(user.uid, category.id, parsed)
+      await setBudget(user.uid, budgetKey(currency, category.id), parsed)
     }
     setEditing(false)
   }
@@ -66,8 +67,10 @@ function BudgetRow({ category, spent, budget }) {
   )
 }
 
-export default function BudgetPage({ monthTransactions, budgets }) {
+export default function BudgetPage({ monthTransactions, budgets, currency = 'IDR' }) {
   const { customCategories } = useData()
+  const formatRupiah = (n) => formatMoney(n, currency)
+  const budgetOf = (categoryId) => Number(budgets[budgetKey(currency, categoryId)]) || 0
   const EXPENSE_CATEGORIES = categoriesForType('expense', customCategories)
   const spentByCategory = {}
   monthTransactions
@@ -76,8 +79,8 @@ export default function BudgetPage({ monthTransactions, budgets }) {
       spentByCategory[t.category] = (spentByCategory[t.category] || 0) + Number(t.amount)
     })
 
-  const budgetedCategories = EXPENSE_CATEGORIES.filter((c) => Number(budgets[c.id]) > 0)
-  const totalBudget = budgetedCategories.reduce((sum, c) => sum + (Number(budgets[c.id]) || 0), 0)
+  const budgetedCategories = EXPENSE_CATEGORIES.filter((c) => budgetOf(c.id) > 0)
+  const totalBudget = budgetedCategories.reduce((sum, c) => sum + budgetOf(c.id), 0)
   const totalSpent = budgetedCategories.reduce((sum, c) => sum + (spentByCategory[c.id] || 0), 0)
 
   return (
@@ -94,7 +97,7 @@ export default function BudgetPage({ monthTransactions, budgets }) {
             <>
               <div className="ring-row">
                 {budgetedCategories.map((cat) => {
-                  const budget = Number(budgets[cat.id]) || 0
+                  const budget = budgetOf(cat.id)
                   const spent = spentByCategory[cat.id] || 0
                   const remaining = Math.max(0, budget - spent)
                   const remainingPercent = budget > 0 ? Math.max(0, ((budget - spent) / budget) * 100) : 0
@@ -136,7 +139,8 @@ export default function BudgetPage({ monthTransactions, budgets }) {
               key={cat.id}
               category={cat}
               spent={spentByCategory[cat.id] || 0}
-              budget={Number(budgets[cat.id]) || 0}
+              budget={budgetOf(cat.id)}
+              currency={currency}
             />
           ))}
         </div>

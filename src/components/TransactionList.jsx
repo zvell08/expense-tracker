@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Trash2, Pencil } from 'lucide-react'
-import { formatRupiah, formatDate } from '../utils/format'
+import { formatMoney, formatDate } from '../utils/format'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/categories'
 import { resolveCategoryDisplay } from '../utils/aggregate'
 import { deleteTransaction } from '../utils/firestore'
-import { walletIdOf } from '../utils/wallets'
+import { walletIdOf, currencyOfTransaction } from '../utils/wallets'
 import { useData } from '../context/DataContext.jsx'
 
 function initials(label) {
@@ -62,7 +62,7 @@ export default function TransactionList({ transactions, showFilter = true, onEdi
               </div>
             </div>
             <div className={`tx-amount ${t.type}`}>
-              {t.type === 'income' ? '+' : '-'}{formatRupiah(t.amount)}
+              {t.type === 'income' ? '+' : '-'}{formatMoney(t.amount, currencyOfTransaction(t, wallets))}
             </div>
             {onEdit && !t.category?.startsWith('goal:') && (
               <button className="tx-delete tx-edit" onClick={() => onEdit(t)} title="Edit">
